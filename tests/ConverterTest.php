@@ -117,9 +117,13 @@ class ConverterTest extends TestCase
                 'json' => '{"count": 150, "same": [{"length": 22.34}, {"length": 160.84}]}',
                 'classNames' => ['Root', 'Same'],
             ],
-            'Nested array with objects' => [
+            'Nested array with objects, simple name' => [
                 'json' => '{"count": 150, "same": [{"length": 22.34, "tag": {"name": "zip"}}, {"length": 160.84}]}',
                 'classNames' => ['Root', 'Same', 'Tag'],
+            ],
+            'Nested array with objects, complex name' => [
+                'json' => '{"count": 150, "same": [{"length": 22.34, "reply_to_message": {"name": "zip"}}, {"length": 160.84}]}',
+                'classNames' => ['Root', 'Same', 'ReplyToMessage'],
             ],
         ];
     }

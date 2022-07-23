@@ -6,7 +6,7 @@ Easy converts json to php classes, parse json array to array of classes. Good to
 composer require --dev uni-method/json-to-php-class
 ```
 
-### By example
+### For example
 Current json
 ```json
 {
@@ -109,6 +109,19 @@ class Tag
         $this->name = $name;
     }
 }
+```
+
+### Camelcase vs snakecase
+
+Library prefers `camelCase` over `snake_case` and automatically replace snake case with additional annotation to original name in snake case form.
+
+```php 
+use Symfony\Component\Serializer\Annotation\SerializedName;
+
+/**
+ * @SerializedName("reply_to_message")
+ */
+protected ReplyToMessage $replyToMessage;
 ```
 
 ## How to use

@@ -182,10 +182,15 @@ class Converter
 
     protected function getClassNameFromType(string $type): string
     {
-        return ucfirst($type);
+        return ucfirst($this->getCamelCase($type));
     }
 
-    protected function getPropertyName(string $str): string
+    protected function getPropertyName(string $property): string
+    {
+        return $this->getCamelCase($property);
+    }
+
+    protected function getCamelCase(string $str): string
     {
         $str = str_replace(['-', '_'], ' ', $str);
         $str = str_replace(' ', '', ucwords($str));
