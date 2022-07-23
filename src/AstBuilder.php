@@ -4,6 +4,7 @@ namespace UniMethod\JsonToPhpClass;
 
 use PhpParser\{BuilderFactory, Node};
 use UniMethod\JsonToPhpClass\Model\NewClass;
+use UniMethod\JsonToPhpClass\Model\NewClassProperty;
 
 class AstBuilder
 {
@@ -54,9 +55,9 @@ class AstBuilder
                 );
 
             if ($property->getType() !== null) {
-                $newProperty->setType($property->getType());
-                $getter->setReturnType($property->getType());
-                $setter->addParam($this->factory->param($property->getName())->setType($property->getType()));
+                $newProperty->setType($this->getTypeWithNullableOption($property));
+                $getter->setReturnType($this->getTypeWithNullableOption($property));
+                $setter->addParam($this->factory->param($property->getName())->setType($this->getTypeWithNullableOption($property)));
 
                 $propertyDocType = [];
 
@@ -66,14 +67,14 @@ class AstBuilder
                 }
 
                 if ($property->getType() !== $property->getDocType()) {
-                    $propertyDocType[] = ' * @var ' . $property->getDocType();
+                    $propertyDocType[] = ' * @var ' . $this->getDocTypeWithNullableOption($property);
 
                     $getter->setDocComment('/**
-                              * @return ' . $property->getDocType() . '
+                              * @return ' . $this->getDocTypeWithNullableOption($property) . '
                               */');
 
                     $setter->setDocComment('/**
-                              * @param ' . $property->getDocType() . ' $' . $property->getName() . '
+                              * @param ' . $this->getDocTypeWithNullableOption($property) . ' $' . $property->getName() . '
                               */');
                 }
 
@@ -108,5 +109,13 @@ class AstBuilder
     protected function getSetter(string $name): string
     {
         return 'set' . ucfirst($name);
+    }
+
+    protected function getTypeWithNullableOption(NewClassProperty $property): string {
+        return ($property->isNullable() ? '?': '') . $property->getType();
+    }
+
+    protected function getDocTypeWithNullableOption(NewClassProperty $property): string {
+        return $property->getDocType() . ($property->isNullable() ? '|null': '');
     }
 }

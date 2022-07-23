@@ -8,13 +8,15 @@ class NewClassProperty
     protected ?string $type;
     protected ?string $docType;
     protected string $originalName;
+    protected bool $nullable;
 
-    public function __construct(string $name, ?string $type, ?string $docType, string $originalName)
+    public function __construct(string $name, ?string $type, ?string $docType, string $originalName, bool $nullable = false)
     {
         $this->name = $name;
         $this->type = $type;
         $this->docType = $docType;
         $this->originalName = $originalName;
+        $this->nullable = $nullable;
     }
 
     public function getName(): string
@@ -35,5 +37,10 @@ class NewClassProperty
     public function getOriginalName(): string
     {
         return $this->originalName;
+    }
+
+    public function isNullable(): bool
+    {
+        return $this->nullable;
     }
 }

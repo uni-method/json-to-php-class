@@ -21,7 +21,7 @@ class Converter
 
     private const APPROVED_ROOT_TYPES = [self::ARRAY, self::OBJECT];
 
-    private const SIMPLE_MAPPING_TYPES = [
+    private const SCALAR_MAPPING_TYPES = [
         self::INTEGER => 'int',
         self::STRING => 'string',
         self::BOOLEAN => 'bool',
@@ -30,10 +30,22 @@ class Converter
 
     private const ROOT_CLASS_NAME = 'Root';
 
+
     /**
      * @var NewClass[]
      */
     protected array $classes = [];
+
+    private ConverterOptions $options;
+
+    public function __construct(?ConverterOptions $options = null)
+    {
+        if ($options === null) {
+            $this->options = new ConverterOptions();
+        } else {
+            $this->options = $options;
+        }
+    }
 
     /**
      * @param string $json
@@ -83,8 +95,8 @@ class Converter
         foreach ($asArray as $name => $value) {
             $valueType = $this->getPhpTypeByJsonValue($value);
 
-            if (array_key_exists($valueType, self::SIMPLE_MAPPING_TYPES)) {
-                $propertyType = self::SIMPLE_MAPPING_TYPES[$valueType];
+            if (array_key_exists($valueType, self::SCALAR_MAPPING_TYPES)) {
+                $propertyType = self::SCALAR_MAPPING_TYPES[$valueType];
                 $docType = $propertyType;
             } elseif ($valueType === self::ARRAY) {
                 $propertyType = self::ARRAY;
@@ -175,8 +187,12 @@ class Converter
 
     protected function addProperty(NewClass $class, string $name, ?string $type, ?string $docType): void
     {
+        $isNullable = (in_array($type, self::SCALAR_MAPPING_TYPES, true))
+            ? $this->options->isNullableScalarProperties()
+            : $this->options->isNullableObjectProperties();
+
         $class->addProperty(
-            new NewClassProperty($this->getPropertyName($name), $type, $docType, $name)
+            new NewClassProperty($this->getPropertyName($name), $type, $docType, $name, $isNullable)
         );
     }
 
