@@ -1,12 +1,17 @@
 # Json to PHP classes
 Easy converts json to php classes, parse json array to array of classes. Good tool to create bridge with excited API based on json format.
 
+### Go to section
+* [Converter options](#options)
+* [Camel case vs snake case](#camel-case-vs-snake-case)
+* [Script to generate php classes from json](#how-to-use)
+
 ## Install via composer
 ```shell
 composer require --dev uni-method/json-to-php-class
 ```
 
-### By example
+### For example
 Current json
 ```json
 {
@@ -111,7 +116,24 @@ class Tag
 }
 ```
 
-## How to use
+### Options
+
+By default, all properties not nullable but you can change this behavior. Just pass options into `new Converter()` constructor `new Converter(new ConverterOptions(bool $nullableScalarProperties, bool $nullableObjectProperties))`
+
+### Camel case vs snake case
+
+Library prefers `camelCase` over `snake_case` and automatically replace snake case with additional annotation to original name in snake case form.
+
+```php 
+use Symfony\Component\Serializer\Annotation\SerializedName;
+
+/**
+ * @SerializedName("reply_to_message")
+ */
+protected ReplyToMessage $replyToMessage;
+```
+
+### How to use
 Create `script.php`
 and copy code
 ```php
