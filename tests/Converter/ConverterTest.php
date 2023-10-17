@@ -1,19 +1,18 @@
 <?php declare(strict_types=1);
 
-namespace UniMethod\JsonToPhpClass\Tests;
+namespace UniMethod\JsonToPhpClass\Tests\Converter;
 
 use JsonException;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Throwable;
-use UniMethod\JsonToPhpClass\Converter;
-use UniMethod\JsonToPhpClass\Model\NewClass;
-use UniMethod\JsonToPhpClass\Model\NewClassProperty;
+use UniMethod\JsonToPhpClass\Converter\Converter;
+use UniMethod\JsonToPhpClass\Converter\Model\{_Class, _Simple, _SimpleCollection};
 
 /**
- * @coversDefaultClass \UniMethod\JsonToPhpClass\Converter
+ * @coversDefaultClass \UniMethod\JsonToPhpClass\Converter\Converter
  */
-class ConverterTest extends TestCase
+final class ConverterTest extends TestCase
 {
     protected Converter $convert;
 
@@ -32,7 +31,7 @@ class ConverterTest extends TestCase
             ['json' => '"hello"', 'exception' => LogicException::class, 'errorMessage' => 'Can process only array, object root types'],
             ['json' => '1.23', 'exception' => LogicException::class, 'errorMessage' => 'Can process only array, object root types'],
             ['json' => '0.0', 'exception' => LogicException::class, 'errorMessage' => 'Can process only array, object root types'],
-            ['json' => '[]', 'exception' => LogicException::class, 'errorMessage' => 'Root array must contain only objects or array of objects'],
+            ['json' => '[]', 'exception' => LogicException::class, 'errorMessage' => 'Cannot convert empty array'],
             ['json' => '[1, 2]', 'exception' => LogicException::class, 'errorMessage' => 'Root array must contain only objects or array of objects'],
             ['json' => '[{}]', 'exception' => LogicException::class, 'errorMessage' => 'Empty object not allowed'],
             ['json' => '[{}, {}]', 'exception' => LogicException::class, 'errorMessage' => 'Empty object not allowed'],
@@ -56,30 +55,69 @@ class ConverterTest extends TestCase
     }
 
     /**
-     * @return array<string, array<string, string|NewClass>>
+     * @return array<int, array<string, string>>
+     */
+    public function dataProviderBorderRestrictions(): array
+    {
+        return [
+            ['json' => '[{"a": "b"}, {"a": {"c": 1}}]', 'exception' => LogicException::class, 'errorMessage' => 'Property \'a\' cannot has simple and object type in the same time'],
+        ];
+    }
+
+    /**
+     * @covers ::convert
+     * @dataProvider dataProviderBorderRestrictions
+     *
+     * @param string $json
+     * @param class-string<Throwable> $exception
+     * @param string $errorMessage
+     * @throws JsonException
+     */
+    public function testBorderRestrictions(string $json, string $exception, string $errorMessage): void
+    {
+        $this->expectException($exception);
+        $this->expectExceptionMessage($errorMessage);
+        $this->convert->convert($json);
+    }
+
+    /**
+     * @return array<string, array<string, string|_Class>>
      */
     public function dataProviderConvertObjects(): array
     {
-        $simpleCase = new NewClass('Root');
-        $simpleCase->addProperty(new NewClassProperty('abc', 'string', 'string', 'abc'));
-        $simpleCase->addProperty(new NewClassProperty('cdv', 'int', 'int', 'Cdv'));
-        $simpleCase->addProperty(new NewClassProperty('rty', 'float', 'float', 'rty'));
-        $simpleCase->addProperty(new NewClassProperty('asd', null, null, 'asd'));
-        $simpleCase->addProperty(new NewClassProperty('fgH', 'bool', 'bool', 'fgH'));
+        $simpleCase = new _Class('Root');
+        $simpleCase->addSimpleType(new _Simple('abc', 'string', 'string', 'abc'));
+        $simpleCase->addSimpleType(new _Simple('cdv', 'int', 'int', 'Cdv'));
+        $simpleCase->addSimpleType(new _Simple('rty', 'float', 'float', 'rty'));
+        $simpleCase->addSimpleType(new _Simple('asd', 'mixed', 'mixed', 'asd'));
+        $simpleCase->addSimpleType(new _Simple('fgH', 'bool', 'bool', 'fgH'));
 
-        $arrayCase = new NewClass('Root');
-        $arrayCase->addProperty(new NewClassProperty('title', 'string', 'string', 'title'));
+        $arrayCase = new _Class('Root');
+        $arrayCase->addSimpleType(new _Simple('title', 'string', 'string', 'title'));
 
-        $arrayWithNotExistedProperties = new NewClass('Root');
-        $arrayWithNotExistedProperties->addProperty(new NewClassProperty('title', 'string', 'string', 'title'));
-        $arrayWithNotExistedProperties->addProperty(new NewClassProperty('isOk', 'bool', 'bool', 'isOk'));
+        $arrayWithNotExistedProperties = new _Class('Root');
+        $arrayWithNotExistedProperties->addSimpleType(new _Simple('title', 'string', 'string', 'title'));
+        $arrayWithNotExistedProperties->addSimpleType(new _Simple('isOk', 'bool', 'bool', 'isOk', true));
+
+        $arrayWithDifferentTypesProperties = new _Class('Root');
+        $arrayWithDifferentTypesProperties->addSimpleType(new _Simple('isAvailable', 'bool|string', 'bool|string', 'isAvailable'));
+        $arrayWithDifferentTypesProperties->addSimpleType(new _Simple('isOk', 'bool', 'bool', 'isOk', true));
+
+        $simpleArrayProperty = new _Class('Root');
+        $simpleArrayProperty->addSimpleCollectionType(new _SimpleCollection(new _Simple('values', 'string', 'string', 'values'), 'value'));
+
+        $simpleDifferentArrayProperty = new _Class('Root');
+        $simpleDifferentArrayProperty->addSimpleCollectionType(new _SimpleCollection(new _Simple('values', 'string|int', 'string|int', 'values'), 'value'));
+
+        $simpleEmptyArrayProperty = new _Class('Root');
+        $simpleEmptyArrayProperty->addSimpleCollectionType(new _SimpleCollection(new _Simple('values', 'mixed', 'mixed', 'values'), 'value'));
 
         return [
             'simple case' => [
                 'json' => '{"abc": "qwe", "Cdv": 123, "rty": 123.23, "asd": null, "fgH": true}',
                 'expected' => $simpleCase,
             ],
-            'root array with no empty objects' => [
+            'root array with not empty objects' => [
                 'json' => '[{"title": "hello world"}, {"title": ""}]',
                 'expected' => $arrayCase,
             ],
@@ -90,6 +128,22 @@ class ConverterTest extends TestCase
             'root array with objects without properties, different order' => [
                 'json' => '[{"title": "hello world", "isOk": true}, {"title": ""}]',
                 'expected' => $arrayWithNotExistedProperties,
+            ],
+            'root array with different types properties' => [
+                'json' => '[{"isAvailable": true, "isOk": true}, {"isAvailable": ""}]',
+                'expected' => $arrayWithDifferentTypesProperties,
+            ],
+            'object with simple types array property' => [
+                'json' => '{"values": ["hello ", "world"]}',
+                'expected' => $simpleArrayProperty,
+            ],
+            'object with with different types of simple types array property' => [
+                'json' => '{"values": ["1", 1]}',
+                'expected' => $simpleDifferentArrayProperty,
+            ],
+            'object with empty array property' => [
+                'json' => '{"values": []}',
+                'expected' => $simpleEmptyArrayProperty,
             ],
         ];
     }
@@ -139,7 +193,7 @@ class ConverterTest extends TestCase
     {
         self::assertEqualsCanonicalizing(
             $classNames,
-            array_map(static fn(NewClass $class) => $class->getName(), $this->convert->convert($json))
+            array_map(static fn(_Class $class) => $class->name, $this->convert->convert($json))
         );
     }
 
