@@ -2,7 +2,6 @@
 Easy converts json to php classes, parse json array to array of classes. Good tool to create bridge with excited API based on json format.
 
 ### Go to section
-* [Converter options](#options)
 * [Camel case vs snake case](#camel-case-vs-snake-case)
 * [Script to generate php classes from json](#how-to-use)
 
@@ -116,15 +115,11 @@ class Tag
 }
 ```
 
-### Options
-
-By default, all properties not nullable but you can change this behavior. Just pass options into `new Converter()` constructor `new Converter(new ConverterOptions(bool $nullableScalarProperties, bool $nullableObjectProperties))`
-
 ### Camel case vs snake case
 
 Library prefers `camelCase` over `snake_case` and automatically replace snake case with additional annotation to original name in snake case form.
 
-```php 
+```php
 use Symfony\Component\Serializer\Annotation\SerializedName;
 
 /**
@@ -136,12 +131,12 @@ protected ReplyToMessage $replyToMessage;
 ### How to use
 Create `script.php`
 and copy code
+
 ```php
 <?php declare(strict_types=1);
 
 use PhpParser\PrettyPrinter;
-use UniMethod\JsonToPhpClass\AstBuilder;
-use UniMethod\JsonToPhpClass\Converter;
+use UniMethod\JsonToPhpClass\{Builder\AstBuilder, Converter\Converter};
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -149,15 +144,31 @@ $json = file_get_contents($argv[1]);
 $path = $argv[2] ?? __DIR__;
 $namespace = $argv[3] ?? 'App\\Model';
 
+$scenarios = new Scenarios;
+$scenarios->attributesOnDifferentNames = [
+    'Symfony\Component\Serializer\Annotation\SerializedName' => [['SerializedName', ['{{ originalName }}']]]
+];
+$scenarios->attributesForNullAndUndefined = [
+    false => [
+        false => [
+            'Symfony\Component\Validator\Constraints as Assert' => [['Assert\NotNull']]
+        ],
+        true => [],
+    ],
+    true => [
+        false => [],
+        true => [],
+    ],
+];
+
 $converter = new Converter();
 $prettyPrinter = new PrettyPrinter\Standard();
-$ast = new AstBuilder($namespace);
+$ast = new AstBuilder();
 $classes = $converter->convert($json);
 
 foreach ($classes as $class) {
-    $fullPath = $path . '/' . $class->getName() . '.php';
-    $body = $ast->build($class);
-    file_put_contents($fullPath, $prettyPrinter->prettyPrintFile([$body]));
+    $fullPath = $path . '/' . $class->name . '.php';
+    file_put_contents($fullPath, $prettyPrinter->prettyPrintFile($ast->build($class)));
 }
 ```
 
@@ -189,3 +200,8 @@ vendor/bin/phpunit
 ```shell
 vendor/bin/phpstan analyse src tests
 ```
+
+## Misc
+Build image for developers
+
+```docker build -t php-debug .```
